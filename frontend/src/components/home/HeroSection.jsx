@@ -243,7 +243,7 @@ const HeroSection = () => {
                   muted
                   loop
                   playsInline
-                  src="https://assets.mixkit.co/videos/preview/mixkit-young-woman-practicing-yoga-at-sunset-39885-large.mp4"
+                  src="https://ik.imagekit.io/r9naagwrj/snaploop/videos/5561375-hd_1080_1920_30fps.mp4?updatedAt=1745143060450"
                 ></video>
                 
                 {/* Mobile UI Overlay - Enhanced Video Controls */}
