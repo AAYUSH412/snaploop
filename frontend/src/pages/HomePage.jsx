@@ -1,8 +1,9 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
-  Play, Upload
+  Play, Upload, ChevronDown, ArrowRight
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Import section components
 import HeroSection from '../components/home/HeroSection';
@@ -12,8 +13,45 @@ import TrendingVideosSection from '../components/home/TrendingVideosSection';
 import AppDownloadSection from '../components/home/AppDownloadSection';
 
 const HomePage = () => {
+  const [isAtBottom, setIsAtBottom] = useState(false);
+  const [showRedirectPrompt, setShowRedirectPrompt] = useState(false);
+  const pageEndRef = useRef(null);
+  const navigate = useNavigate();
+
+  // Function to check if user has scrolled to the bottom
+  const handleScroll = () => {
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
+      setIsAtBottom(true);
+      // Show redirect prompt after a short delay when reaching bottom
+      setTimeout(() => {
+        setShowRedirectPrompt(true);
+      }, 500);
+    } else {
+      setIsAtBottom(false);
+      setShowRedirectPrompt(false);
+    }
+  };
+
+  // Add scroll event listener
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  // Function to handle redirect to explore page
+  const handleRedirectToExplore = () => {
+    navigate('/explore');
+  };
+
+  // Function to scroll to page bottom
+  const scrollToBottom = () => {
+    pageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <div className="pb-12 overflow-x-hidden">
+    <div className="pb-12 overflow-x-hidden relative">
       {/* Hero Section */}
       <HeroSection />
       
@@ -81,6 +119,46 @@ const HomePage = () => {
           </div>
         </div>
       </section>
+
+      {/* Scroll to explore section */}
+      <div className="text-center mb-8">
+        <motion.button
+          onClick={scrollToBottom}
+          className="flex flex-col items-center text-gray-400 hover:text-white transition-colors"
+          animate={{ y: [0, 10, 0] }}
+          transition={{ repeat: Infinity, duration: 2 }}
+          whileHover={{ scale: 1.1 }}
+        >
+          <span className="text-sm mb-2">Scroll to explore more</span>
+          <ChevronDown size={20} />
+        </motion.button>
+      </div>
+      
+      {/* Explore page redirect prompt - Appears when at bottom */}
+      <AnimatePresence>
+        {showRedirectPrompt && (
+          <motion.div 
+            className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40"
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          >
+            <motion.button
+              onClick={handleRedirectToExplore}
+              className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white font-medium px-6 py-3 rounded-full flex items-center shadow-lg shadow-purple-500/20 border border-white/10 backdrop-blur-sm"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <span>Continue to Explore</span>
+              <ArrowRight size={18} className="ml-2" />
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom reference div */}
+      <div ref={pageEndRef} className="h-1" />
     </div>
   );
 };

@@ -177,25 +177,25 @@ const ProfilePage = () => {
           </motion.div>
           
           {/* Profile Actions - Enhanced */}
-          <div className="flex justify-end space-x-2 mb-8">
+          <div className="flex flex-wrap justify-end gap-2 mb-8">
             <motion.button 
               whileHover={{ scale: 1.05, backgroundColor: 'rgba(31, 41, 55, 0.8)' }}
               whileTap={{ scale: 0.95 }}
-              className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-800/80 hover:bg-gray-700/80 transition-colors text-white backdrop-blur-sm border border-white/5"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-gray-800/80 hover:bg-gray-700/80 transition-colors text-white backdrop-blur-sm border border-white/5"
               onClick={handleShareProfile}
             >
               <Share2 size={16} />
-              <span>Share</span>
+              <span className="hidden sm:inline">Share</span>
             </motion.button>
             
             <motion.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600/90 to-blue-500/90 hover:from-purple-700 hover:to-blue-600 transition-colors text-white shadow-md shadow-purple-500/20 backdrop-blur-sm"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600/90 to-blue-500/90 hover:from-purple-700 hover:to-blue-600 transition-colors text-white shadow-md shadow-purple-500/20 backdrop-blur-sm"
               onClick={() => navigate('/edit-profile')}
             >
               <Edit size={16} />
-              <span>Edit Profile</span>
+              <span className="hidden sm:inline">Edit Profile</span>
             </motion.button>
             
             <motion.button 
@@ -219,11 +219,11 @@ const ProfilePage = () => {
               {userData.displayName}
             </motion.h1>
             
-            <motion.div className="flex flex-wrap gap-x-3 items-center mb-3 mt-1">
-              <span className="text-blue-400">{userData.username}</span>
+            <motion.div className="flex flex-wrap gap-x-3 gap-y-1 items-center mb-3 mt-1">
+              <span className="text-blue-400 font-medium">{userData.username}</span>
               
               {/* Category badge */}
-              <span className="text-xs px-2.5 py-1 bg-blue-500/20 text-blue-400 rounded-full">
+              <span className="text-xs px-2.5 py-1 bg-blue-500/20 text-blue-400 rounded-full border border-blue-500/10">
                 {userData.category || 'Creator'}
               </span>
               
@@ -234,7 +234,7 @@ const ProfilePage = () => {
             </motion.div>
             
             <motion.p 
-              className="text-gray-300 mb-6 max-w-2xl leading-relaxed"
+              className="text-gray-300 mb-6 max-w-2xl leading-relaxed text-sm sm:text-base"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
@@ -385,13 +385,13 @@ const ProfilePage = () => {
       
       {/* Tabs Navigation - Enhanced */}
       <motion.div 
-        className="flex border-b border-gray-800/70 mb-8 relative"
+        className="flex overflow-x-auto scrollbar-hide border-b border-gray-800/70 mb-8 relative"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
       >
         <button
-          className={`flex items-center space-x-2 px-6 py-4 font-medium border-b-2 transition-all ${
+          className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 font-medium border-b-2 transition-all flex-shrink-0 ${
             activeTab === 'videos'
               ? 'text-white border-purple-500 bg-gradient-to-b from-purple-500/10 to-transparent'
               : 'text-gray-400 border-transparent hover:text-white hover:bg-white/5'
@@ -403,7 +403,7 @@ const ProfilePage = () => {
         </button>
         
         <button
-          className={`flex items-center space-x-2 px-6 py-4 font-medium border-b-2 transition-all ${
+          className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 font-medium border-b-2 transition-all flex-shrink-0 ${
             activeTab === 'liked'
               ? 'text-white border-purple-500 bg-gradient-to-b from-purple-500/10 to-transparent'
               : 'text-gray-400 border-transparent hover:text-white hover:bg-white/5'
@@ -432,7 +432,7 @@ const ProfilePage = () => {
             initial="hidden"
             animate="visible"
             exit={{ opacity: 0 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 px-2 sm:px-0"
           >
             {userProfileVideos.map((video) => (
               <motion.div
@@ -446,10 +446,11 @@ const ProfilePage = () => {
                     src={video.thumbnail} 
                     alt={video.title} 
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                     <motion.button
-                      className="bg-purple-600/80 hover:bg-purple-600 text-white w-16 h-16 rounded-full flex items-center justify-center backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-xl"
+                      className="bg-purple-600/80 hover:bg-purple-600 text-white w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-xl"
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                     >
@@ -474,6 +475,7 @@ const ProfilePage = () => {
                       className="w-8 h-8 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white"
                       whileHover={{ scale: 1.2, backgroundColor: 'rgba(139, 92, 246, 0.5)' }}
                       whileTap={{ scale: 0.9 }}
+                      aria-label="Like video"
                     >
                       <Heart size={14} />
                     </motion.button>
@@ -481,6 +483,7 @@ const ProfilePage = () => {
                       className="w-8 h-8 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white"
                       whileHover={{ scale: 1.2, backgroundColor: 'rgba(59, 130, 246, 0.5)' }}
                       whileTap={{ scale: 0.9 }}
+                      aria-label="Comment on video"
                     >
                       <MessageCircle size={14} />
                     </motion.button>
@@ -488,6 +491,7 @@ const ProfilePage = () => {
                       className="w-8 h-8 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white"
                       whileHover={{ scale: 1.2, backgroundColor: 'rgba(16, 185, 129, 0.5)' }}
                       whileTap={{ scale: 0.9 }}
+                      aria-label="Save video"
                     >
                       <BookmarkIcon size={14} />
                     </motion.button>
@@ -520,7 +524,7 @@ const ProfilePage = () => {
             initial="hidden"
             animate="visible"
             exit={{ opacity: 0 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 px-2 sm:px-0"
           >
             {userLikedVideos.map((video) => (
               <motion.div
@@ -534,10 +538,11 @@ const ProfilePage = () => {
                     src={video.thumbnail} 
                     alt={video.title} 
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                     <motion.button
-                      className="bg-blue-600/80 hover:bg-blue-600 text-white w-16 h-16 rounded-full flex items-center justify-center backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-xl"
+                      className="bg-blue-600/80 hover:bg-blue-600 text-white w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-xl"
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                     >
@@ -560,12 +565,35 @@ const ProfilePage = () => {
                   <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full flex items-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                     <span className="text-blue-400">{video.creator}</span>
                   </div>
+                  
+                  {/* Interactive buttons */}
+                  <div className="absolute bottom-3 left-3 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <motion.button
+                      className="w-8 h-8 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white"
+                      whileHover={{ scale: 1.2, backgroundColor: 'rgba(239, 68, 68, 0.5)' }}
+                      whileTap={{ scale: 0.9 }}
+                      aria-label="Unlike video"
+                    >
+                      <Heart size={14} className="text-red-400" fill="#F87171" />
+                    </motion.button>
+                    <motion.button
+                      className="w-8 h-8 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white"
+                      whileHover={{ scale: 1.2, backgroundColor: 'rgba(59, 130, 246, 0.5)' }}
+                      whileTap={{ scale: 0.9 }}
+                      aria-label="Comment on video"
+                    >
+                      <MessageCircle size={14} />
+                    </motion.button>
+                  </div>
                 </div>
                 
                 <div className="p-4">
                   <h3 className="text-white font-medium text-base mb-1 line-clamp-1 group-hover:text-blue-300 transition-colors">{video.title}</h3>
                   <div className="flex justify-between items-center">
-                    <span className="text-blue-400 text-xs">{video.creator}</span>
+                    <div className="flex items-center gap-1">
+                      <div className="w-4 h-4 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex-shrink-0"></div>
+                      <span className="text-blue-400 text-xs">{video.creator}</span>
+                    </div>
                     <span className="text-gray-400 text-xs">{video.timestamp}</span>
                   </div>
                 </div>
@@ -578,30 +606,72 @@ const ProfilePage = () => {
         {((activeTab === 'videos' && userProfileVideos.length === 0) || 
           (activeTab === 'liked' && userLikedVideos.length === 0)) && (
           <motion.div 
-            className="flex flex-col items-center justify-center py-16 text-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            className="flex flex-col items-center justify-center py-16 text-center px-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.5 }}
           >
-            <div className="w-24 h-24 bg-gray-800/50 rounded-full flex items-center justify-center mb-6">
+            <motion.div 
+              className="w-24 h-24 bg-gradient-to-br from-gray-800/50 to-gray-700/30 rounded-full flex items-center justify-center mb-6 border border-gray-700/30"
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 300, 
+                damping: 20,
+                delay: 0.2 
+              }}
+            >
               {activeTab === 'videos' ? (
-                <Grid size={32} className="text-gray-500" />
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <Grid size={32} className="text-gray-400" />
+                </motion.div>
               ) : (
-                <Heart size={32} className="text-gray-500" />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ 
+                    opacity: 1,
+                    scale: [0.5, 1.2, 1],
+                  }}
+                  transition={{ 
+                    duration: 0.8,
+                    delay: 0.4
+                  }}
+                >
+                  <Heart size={32} className="text-gray-400" />
+                </motion.div>
               )}
-            </div>
-            <h3 className="text-xl font-semibold text-white mb-2">
+            </motion.div>
+            <motion.h3 
+              className="text-xl font-semibold text-white mb-2"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
               {activeTab === 'videos' ? 'No videos yet' : 'No liked videos yet'}
-            </h3>
-            <p className="text-gray-400 max-w-md mb-8">
+            </motion.h3>
+            <motion.p 
+              className="text-gray-400 max-w-md mb-8"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
               {activeTab === 'videos' 
                 ? 'Upload your first video to start building your profile.'
                 : 'Videos you like will appear here. Start exploring to find content you enjoy!'}
-            </p>
+            </motion.p>
             <motion.button
-              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-500 text-white font-medium rounded-lg shadow-lg"
+              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-500 text-white font-medium rounded-lg shadow-lg hover:shadow-purple-500/20"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
             >
               {activeTab === 'videos' ? 'Upload a Video' : 'Explore Content'}
             </motion.button>
@@ -613,16 +683,36 @@ const ProfilePage = () => {
       <AnimatePresence>
         {showShareToast && (
           <motion.div 
-            className="fixed bottom-5 right-5 bg-green-500/90 text-white px-4 py-3 rounded-lg shadow-lg border border-green-400 backdrop-blur-sm z-50 flex items-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
+            className="fixed bottom-5 right-5 bg-gradient-to-r from-green-500/90 to-emerald-500/90 text-white px-5 py-3 rounded-xl shadow-lg border border-green-400/30 backdrop-blur-sm z-50 flex items-center gap-3"
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            transition={{ 
+              type: "spring",
+              stiffness: 500, 
+              damping: 25 
+            }}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
-            </svg>
-            Profile link copied to clipboard!
+            <div className="p-1 bg-white/20 rounded-full">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-medium">Success!</p>
+              <p className="text-sm text-white/80">Profile link copied to clipboard</p>
+            </div>
+            <motion.button 
+              className="ml-auto p-1 hover:bg-white/10 rounded-full"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowShareToast(false)}
+              aria-label="Close notification"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>

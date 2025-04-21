@@ -48,7 +48,7 @@ const AppLayout = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4 }}
           style={{ 
-            paddingTop: showCategories ? '7rem' : '4rem', // Adjusted for mobile top navbar
+            paddingTop: showCategories ? '7rem' : '1rem', // Adjusted for mobile top navbar
           }}
         >
           <Outlet />

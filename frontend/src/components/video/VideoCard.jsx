@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { BookmarkIcon, Heart, MessageCircle, Share2, Music, Volume2, VolumeX, Loader } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
-export default function VideoCard({ video = {}, onCommentClick, className = "" }) {
+export default function VideoCard({ video = {}, onCommentClick, className = "", isActive = false }) {
   const [isLiked, setIsLiked] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
   const [isMuted, setIsMuted] = useState(true)
@@ -13,85 +13,158 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
   const [isLoading, setIsLoading] = useState(true)
   const [showCommentOverlay, setShowCommentOverlay] = useState(false)
   const [showShareOverlay, setShowShareOverlay] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
   const videoRef = useRef(null)
+  const attemptedPlayRef = useRef(false)
 
-  // Handle video visibility and playback with better threshold for smoother experience
+  // Handle video visibility and playback with improved threshold
   useEffect(() => {
     const options = {
       root: null,
       rootMargin: '0px',
-      threshold: 0.8 // Increased threshold for better visibility detection
+      threshold: [0.5, 0.75, 0.9] // Multiple thresholds for better visibility detection
     }
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting && videoRef.current) {
-          videoRef.current.play().catch(error => console.log("Playback error:", error))
-          setIsPlaying(true)
-        } else if (videoRef.current) {
-          videoRef.current.pause()
-          setIsPlaying(false)
-        }
-      })
-    }, options)
-
+    let observer = null;
+    
+    // Create observer only if we have a valid video element
     if (videoRef.current) {
-      observer.observe(videoRef.current)
+      observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          // Set visibility based on intersection
+          const isNowVisible = entry.isIntersecting && entry.intersectionRatio > 0.5;
+          setIsVisible(isNowVisible);
+          
+          // Only play if this is the active card and it's in view
+          if (isNowVisible && videoRef.current && isActive) {
+            attemptedPlayRef.current = true;
+            videoRef.current.play().catch(error => {
+              console.log("Playback error:", error);
+              // If autoplay was blocked, set up a click handler to play
+              const handleUserInteraction = () => {
+                if (videoRef.current) {
+                  videoRef.current.play().catch(e => console.log("Play on interaction failed:", e));
+                  document.removeEventListener('click', handleUserInteraction);
+                }
+              };
+              document.addEventListener('click', handleUserInteraction, { once: true });
+            });
+            setIsPlaying(true);
+          } else if (videoRef.current) {
+            videoRef.current.pause();
+            setIsPlaying(false);
+          }
+        });
+      }, options);
+      
+      observer.observe(videoRef.current);
       
       // Add loading event listeners
-      videoRef.current.addEventListener('loadstart', () => setIsLoading(true))
-      videoRef.current.addEventListener('loadeddata', () => setIsLoading(false))
-      videoRef.current.addEventListener('canplay', () => setIsLoading(false))
-    }
-
-    return () => {
-      if (videoRef.current) {
-        observer.unobserve(videoRef.current)
-        videoRef.current.removeEventListener('loadstart', () => setIsLoading(true))
-        videoRef.current.removeEventListener('loadeddata', () => setIsLoading(false))
-        videoRef.current.removeEventListener('canplay', () => setIsLoading(false))
+      const handleLoadStart = () => setIsLoading(true);
+      const handleLoaded = () => setIsLoading(false);
+      
+      videoRef.current.addEventListener('loadstart', handleLoadStart);
+      videoRef.current.addEventListener('loadeddata', handleLoaded);
+      videoRef.current.addEventListener('canplay', handleLoaded);
+      
+      return () => {
+        // Check if observer and video element still exist before cleanup
+        if (observer) {
+          if (videoRef.current) {
+            observer.unobserve(videoRef.current);
+            
+            // Also clean up the event listeners
+            videoRef.current.removeEventListener('loadstart', handleLoadStart);
+            videoRef.current.removeEventListener('loadeddata', handleLoaded);
+            videoRef.current.removeEventListener('canplay', handleLoaded);
+          }
+          
+          // Disconnect the observer regardless
+          observer.disconnect();
+        }
       }
     }
-  }, [])
-
-  // Simulate video progress
+  }, [isActive]);
+  
+  // Handle active state changes with forced play attempt
   useEffect(() => {
-    let interval
+    if (isActive && isVisible && videoRef.current) {
+      // Reset the attempted play flag when active state changes
+      attemptedPlayRef.current = true;
+      
+      // Try to play the video
+      const playPromise = videoRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          setIsPlaying(true);
+        }).catch(error => {
+          console.log("Playback error on active change:", error);
+          setIsPlaying(false);
+        });
+      }
+    } else if (videoRef.current) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    }
+  }, [isActive, isVisible]);
+
+  // Force-check play state when video becomes active
+  useEffect(() => {
+    if (isActive && videoRef.current) {
+      // Additional timeout to ensure the video plays after DOM updates
+      const timer = setTimeout(() => {
+        if (!isPlaying && attemptedPlayRef.current && videoRef.current) {
+          videoRef.current.play().catch(e => console.log("Delayed play attempt failed:", e));
+        }
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isActive, isPlaying]);
+
+  // Update video progress
+  useEffect(() => {
+    let interval;
     if (isPlaying) {
       interval = setInterval(() => {
         setProgress((prev) => {
           if (videoRef.current) {
-            return (videoRef.current.currentTime / videoRef.current.duration) * 100 || prev
+            return (videoRef.current.currentTime / videoRef.current.duration) * 100 || prev;
           }
-          return prev >= 100 ? 0 : prev + 0.5
-        })
-      }, 100)
+          return prev >= 100 ? 0 : prev + 0.5;
+        });
+      }, 100);
     }
-    return () => clearInterval(interval)
-  }, [isPlaying])
+    return () => clearInterval(interval);
+  }, [isPlaying]);
 
   const toggleMute = (e) => {
     e.stopPropagation(); // Prevent video play/pause
     if (videoRef.current) {
-      videoRef.current.muted = !videoRef.current.muted
-      setIsMuted(!isMuted)
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsMuted(!isMuted);
     }
   }
 
   const togglePlay = () => {
+    if (!isActive) return; // Only allow play/pause if active
+    
     if (videoRef.current) {
       if (isPlaying) {
-        videoRef.current.pause()
-        setIsPlaying(false)
+        videoRef.current.pause();
+        setIsPlaying(false);
       } else {
-        videoRef.current.play().catch(e => console.log(e))
-        setIsPlaying(true)
+        videoRef.current.play().catch(e => console.log(e));
+        setIsPlaying(true);
       }
     }
   }
 
   const handleCommentClick = (e) => {
     e.stopPropagation(); // Prevent video play/pause
+    if (!isActive) return; // Only show comments if active
+    
     if (onCommentClick) {
       onCommentClick(video);
     } else {
@@ -106,16 +179,19 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
 
   const handleShareClick = (e) => {
     e.stopPropagation(); // Prevent video play/pause
+    if (!isActive) return; // Only show share if active
     setShowShareOverlay(true);
   }
 
   const handleLikeClick = (e) => {
     e.stopPropagation(); // Prevent video play/pause
+    if (!isActive) return; // Only allow like if active
     setIsLiked(!isLiked);
   }
 
   const handleSaveClick = (e) => {
     e.stopPropagation(); // Prevent video play/pause
+    if (!isActive) return; // Only allow save if active
     setIsSaved(!isSaved);
   }
 
@@ -123,12 +199,14 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
   const username = video?.username || "@motion.master"
   const title = video?.title || "Epic mountain biking adventure through the forest 🚵‍♂️🌲 #adventure"
   const hashtags = video?.hashtags || ["adventure", "mountainbiking", "outdoors"]
+  const likes = isLiked ? (parseFloat(video?.likes || "23.4") + 0.1).toFixed(1) + "K" : video?.likes || "23.4K"
+  const comments = video?.comments || "1.2K"
 
   return (
-    <div className={`relative h-full w-full max-w-md mx-auto bg-black overflow-hidden snap-center ${className}`}>
+    <div className={`relative h-full w-full max-w-md mx-auto bg-black overflow-hidden snap-center ${className}`} data-video-card={true}>
       {/* Progress bar with animated gradient */}
       <motion.div 
-        className="absolute top-0 left-0 right-0 h-1.5 bg-black/20 z-30"
+        className="absolute top-0 left-0 right-0 h-1 bg-black/20 z-30"
         initial={{ opacity: 0 }}
         animate={{ opacity: isPlaying ? 1 : 0 }}
         transition={{ duration: 0.3 }}
@@ -144,7 +222,7 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
         ref={videoRef} 
         className="absolute inset-0 w-full h-full object-cover z-0" 
         loop 
-        muted 
+        muted={isMuted}
         playsInline
         preload="auto"
         onClick={togglePlay}
@@ -169,14 +247,14 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
             >
-              <Loader className="w-10 h-10 text-white" />
+              <Loader className="w-8 h-8 text-white" />
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Video Overlay Filters with improved aesthetics */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/90 z-10"></div>
+      {/* Video Overlay Gradients - Improved for better text readability */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/70 z-10"></div>
       <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/10 to-pink-900/10 mix-blend-overlay z-10"></div>
 
       {/* Play/Pause Indicator - shows briefly when toggled */}
@@ -190,11 +268,10 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
             transition={{ duration: 0.2 }}
           >
             <motion.div 
-              className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center"
-              whileHover={{ scale: 1.1, backgroundColor: "rgba(0,0,0,0.6)" }}
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center"
               whileTap={{ scale: 0.95 }}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 sm:h-10 sm:w-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
               </svg>
             </motion.div>
@@ -202,13 +279,12 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
         )}
       </AnimatePresence>
 
-      {/* Mute/Unmute Button with animations */}
+      {/* Mute/Unmute Button - More compact for mobile */}
       <motion.button
         onClick={toggleMute}
-        className="absolute top-4 right-4 rounded-full bg-black/30 backdrop-blur-md hover:bg-black/50 transition-all duration-300 z-30 w-12 h-12 flex items-center justify-center"
-        whileHover={{ scale: 1.1 }}
+        className="absolute top-4 right-4 rounded-full bg-black/30 backdrop-blur-sm p-2 z-30"
         whileTap={{ scale: 0.9 }}
-        initial={{ opacity: 0, y: -10 }}
+        initial={{ opacity: 0, y: -5 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
@@ -217,40 +293,39 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
             <motion.div
               key="muted"
               initial={{ scale: 0 }}
-              animate={{ scale: 1, rotate: 0 }}
-              exit={{ scale: 0, rotate: 45 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <VolumeX className="w-5 h-5 text-white" />
+              <VolumeX className="w-4 h-4 text-white" />
             </motion.div>
           ) : (
             <motion.div
               key="unmuted"
               initial={{ scale: 0 }}
-              animate={{ scale: 1, rotate: 0 }}
-              exit={{ scale: 0, rotate: -45 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <Volume2 className="w-5 h-5 text-white" />
+              <Volume2 className="w-4 h-4 text-white" />
             </motion.div>
           )}
         </AnimatePresence>
       </motion.button>
 
-      {/* Interaction Bar - Right Side with enhanced animations */}
-      <div className="absolute right-3 bottom-32 flex flex-col items-center gap-7 z-20">
+      {/* Interaction Bar - Right Side with more compact buttons for mobile */}
+      <div className="absolute right-2 bottom-24 sm:bottom-32 flex flex-col items-center gap-5 z-20">
         <motion.div 
-          className="flex flex-col items-center gap-1 group"
-          initial={{ opacity: 0, x: 20 }}
+          className="flex flex-col items-center"
+          initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.2 }}
         >
           <motion.button
             className={`rounded-full ${
-              isLiked ? "bg-pink-500/30 shadow-lg shadow-pink-500/20" : "bg-black/30 hover:bg-black/50"
-            } backdrop-blur-md transition-all duration-300 w-14 h-14 flex items-center justify-center`}
+              isLiked ? "bg-black/20 text-pink-500" : "bg-black/20 text-white"
+            } backdrop-blur-sm p-2`}
             onClick={handleLikeClick}
-            whileHover={{ scale: 1.15 }}
             whileTap={{ scale: 0.9 }}
           >
             <AnimatePresence mode="wait">
@@ -258,75 +333,70 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
                 <motion.div
                   key="liked"
                   initial={{ scale: 0 }}
-                  animate={{ scale: [0, 1.2, 1] }}
-                  transition={{ duration: 0.4 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <Heart
-                    className="w-7 h-7 fill-pink-500 text-pink-500"
-                  />
+                  <Heart className="w-5 h-5 fill-pink-500 text-pink-500" />
                 </motion.div>
               ) : (
                 <motion.div key="not-liked">
-                  <Heart className="w-7 h-7 text-white" />
+                  <Heart className="w-5 h-5" />
                 </motion.div>
               )}
             </AnimatePresence>
           </motion.button>
           <motion.span 
-            className={`text-sm font-medium ${isLiked ? "text-pink-400" : "text-white"} transition-colors`}
+            className={`text-xs font-medium ${isLiked ? "text-pink-400" : "text-white"} mt-1`}
             animate={{ y: isLiked ? [0, -5, 0] : 0 }}
             transition={{ duration: 0.3 }}
           >
-            {isLiked ? "23.5K" : "23.4K"}
+            {likes}
           </motion.span>
         </motion.div>
 
         <motion.div 
-          className="flex flex-col items-center gap-1 group"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <motion.button
-            className="rounded-full bg-black/30 backdrop-blur-md hover:bg-black/50 transition-all duration-300 w-14 h-14 flex items-center justify-center"
-            onClick={handleCommentClick}
-            whileHover={{ scale: 1.15 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            <MessageCircle className="w-7 h-7 text-white" />
-          </motion.button>
-          <span className="text-sm font-medium text-white">1.2K</span>
-        </motion.div>
-
-        <motion.div 
-          className="flex flex-col items-center gap-1 group"
-          initial={{ opacity: 0, x: 20 }}
+          className="flex flex-col items-center"
+          initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
         >
           <motion.button
-            className="rounded-full bg-black/30 backdrop-blur-md hover:bg-black/50 transition-all duration-300 w-14 h-14 flex items-center justify-center"
-            onClick={handleShareClick}
-            whileHover={{ scale: 1.15 }}
+            className="rounded-full bg-black/20 backdrop-blur-sm p-2"
+            onClick={handleCommentClick}
             whileTap={{ scale: 0.9 }}
           >
-            <Share2 className="w-7 h-7 text-white" />
+            <MessageCircle className="w-5 h-5 text-white" />
           </motion.button>
-          <span className="text-sm font-medium text-white">Share</span>
+          <span className="text-xs font-medium text-white mt-1">{comments}</span>
         </motion.div>
 
         <motion.div 
-          className="flex flex-col items-center gap-1 group"
-          initial={{ opacity: 0, x: 20 }}
+          className="flex flex-col items-center"
+          initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4 }}
         >
           <motion.button
-            className={`rounded-full ${
-              isSaved ? "bg-purple-500/30 shadow-lg shadow-purple-500/20" : "bg-black/30 hover:bg-black/50"
-            } backdrop-blur-md transition-all duration-300 w-14 h-14 flex items-center justify-center`}
+            className="rounded-full bg-black/20 backdrop-blur-sm p-2"
+            onClick={handleShareClick}
+            whileTap={{ scale: 0.9 }}
+          >
+            <Share2 className="w-5 h-5 text-white" />
+          </motion.button>
+          <span className="text-xs font-medium text-white mt-1">Share</span>
+        </motion.div>
+
+        <motion.div 
+          className="flex flex-col items-center"
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <motion.button
+            className={`rounded-full bg-black/20 backdrop-blur-sm p-2 ${
+              isSaved ? "text-purple-500" : "text-white"
+            }`}
             onClick={handleSaveClick}
-            whileHover={{ scale: 1.15 }}
             whileTap={{ scale: 0.9 }}
           >
             <AnimatePresence mode="wait">
@@ -334,63 +404,61 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
                 <motion.div
                   key="saved"
                   initial={{ scale: 0 }}
-                  animate={{ scale: [0, 1.2, 1] }}
-                  transition={{ duration: 0.4 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <BookmarkIcon
-                    className="w-7 h-7 fill-purple-500 text-purple-500"
-                  />
+                  <BookmarkIcon className="w-5 h-5 fill-purple-500 text-purple-500" />
                 </motion.div>
               ) : (
                 <motion.div key="not-saved">
-                  <BookmarkIcon className="w-7 h-7 text-white" />
+                  <BookmarkIcon className="w-5 h-5" />
                 </motion.div>
               )}
             </AnimatePresence>
           </motion.button>
-          <span className={`text-sm font-medium ${isSaved ? "text-purple-400" : "text-white"} transition-colors`}>
+          <span className={`text-xs font-medium ${isSaved ? "text-purple-400" : "text-white"} mt-1`}>
             Save
           </span>
         </motion.div>
       </div>
 
-      {/* User Info and Video Details - Bottom with better animations and layout */}
+      {/* User Info and Video Details - Bottom with better layout for mobile */}
       <motion.div 
-        className="absolute left-4 right-20 bottom-8 z-20"
-        initial={{ opacity: 0, y: 20 }}
+        className="absolute left-3 right-14 bottom-6 z-20"
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-2 mb-2">
           <div className="relative group">
             <motion.div 
-              className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 animate-spin-slow blur-sm opacity-70 group-hover:opacity-100"
+              className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 opacity-70 group-hover:opacity-100"
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
             ></motion.div>
             <motion.div 
-              className="w-12 h-12 border-2 border-white relative rounded-full overflow-hidden bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center"
-              whileHover={{ scale: 1.1 }}
+              className="w-8 h-8 sm:w-10 sm:h-10 border-2 border-white relative rounded-full overflow-hidden bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center"
               whileTap={{ scale: 0.95 }}
             >
-              <span className="text-white text-sm font-bold">{username.substring(1, 3).toUpperCase()}</span>
+              <span className="text-white text-xs font-bold">{username.substring(1, 3).toUpperCase()}</span>
             </motion.div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-white font-semibold">{username}</span>
-            <span className="text-xs text-white/70">Pro Creator</span>
+          <div className="flex items-center justify-between flex-1">
+            <div className="flex flex-col">
+              <span className="text-white text-sm font-semibold">{username}</span>
+              <span className="text-xs text-white/70">Pro Creator</span>
+            </div>
+            <motion.button
+              className="h-7 px-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white border-none shadow-md rounded-full text-xs font-medium"
+              whileTap={{ scale: 0.95 }}
+            >
+              Follow
+            </motion.button>
           </div>
-          <motion.button
-            className="ml-auto h-9 px-4 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white border-none shadow-lg shadow-purple-700/20 hover:shadow-purple-700/40 transition-all duration-300 rounded-full text-sm font-medium"
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            Follow
-          </motion.button>
         </div>
 
         <motion.h3 
-          className="text-white font-medium mb-3 text-base leading-tight"
+          className="text-white font-medium mb-2 text-sm sm:text-base line-clamp-1"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
@@ -399,50 +467,50 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
         </motion.h3>
 
         <motion.div 
-          className="flex flex-wrap gap-2 mb-3"
+          className="flex flex-wrap gap-1.5 mb-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          {hashtags.map((tag, index) => (
+          {hashtags.slice(0, 3).map((tag, index) => (
             <motion.span 
               key={index} 
-              className="text-sm bg-white/10 backdrop-blur-md px-2 py-0.5 rounded-full text-white font-medium hover:bg-white/20 transition-colors cursor-pointer"
-              initial={{ opacity: 0, y: 10 }}
+              className="text-xs bg-white/10 backdrop-blur-sm px-2 py-0.5 rounded-full text-white font-medium transition-colors cursor-pointer"
+              initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 + (index * 0.1) }}
-              whileHover={{ y: -2, backgroundColor: "rgba(255, 255, 255, 0.2)" }}
+              whileTap={{ scale: 0.95 }}
             >
               #{typeof tag === 'string' ? tag : tag}
             </motion.span>
           ))}
         </motion.div>
 
-        {/* Music info with animated gradient */}
+        {/* Music info - more compact for mobile */}
         <motion.div 
-          className="flex items-center gap-2 mb-1 bg-black/30 backdrop-blur-md rounded-full px-3 py-1.5 w-fit"
-          initial={{ opacity: 0, x: -20 }}
+          className="flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-2 py-1 w-fit"
+          initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.6 }}
-          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
         >
-          <div className="relative w-6 h-6 flex-shrink-0">
+          <div className="relative w-4 h-4 flex-shrink-0">
             <motion.div 
               className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-500 to-purple-500"
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
             ></motion.div>
-            <Music className="w-4 h-4 text-white absolute inset-0 m-auto" />
+            <Music className="w-3 h-3 text-white absolute inset-0 m-auto" />
           </div>
-          <div className="overflow-hidden max-w-[180px]">
-            <p className="text-xs text-white whitespace-nowrap animate-marquee">
-              Original Sound - Mountain Adventures • 4.2M views
+          <div className="overflow-hidden max-w-[120px]">
+            <p className="text-[10px] text-white whitespace-nowrap animate-marquee">
+              Original Sound • 4.2M views
             </p>
           </div>
         </motion.div>
       </motion.div>
 
-      {/* Comment Overlay */}
+      {/* Comment Overlay - More mobile friendly */}
       <AnimatePresence>
         {showCommentOverlay && (
           <motion.div
@@ -452,57 +520,55 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
             exit={{ opacity: 0, y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
           >
-            <div className="flex items-center justify-between p-4 border-b border-gray-800">
-              <h3 className="text-white font-semibold">Comments (1.2K)</h3>
+            <div className="flex items-center justify-between p-3 border-b border-gray-800">
+              <h3 className="text-white font-semibold text-sm">Comments ({comments})</h3>
               <motion.button 
-                className="rounded-full p-2 bg-gray-800 text-white"
+                className="rounded-full p-1.5 bg-gray-800 text-white"
                 onClick={() => setShowCommentOverlay(false)}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.9 }}
               >
                 ✕
               </motion.button>
             </div>
             
-            <div className="overflow-y-auto flex-1 p-4 space-y-4">
-              {/* Sample comments - would be dynamic in real implementation */}
+            <div className="overflow-y-auto flex-1 p-3 space-y-3">
+              {/* Sample comments */}
               {[1, 2, 3, 4, 5].map((item) => (
                 <motion.div 
                   key={item}
-                  className="flex gap-3"
+                  className="flex gap-2"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: item * 0.1 }}
                 >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex-shrink-0 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex-shrink-0 flex items-center justify-center">
                     <span className="text-white text-xs font-bold">U{item}</span>
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-white font-medium text-sm">user_{item*123}</p>
-                      <span className="text-gray-500 text-xs">{item} hour{item > 1 ? 's' : ''} ago</span>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-white font-medium text-xs">user_{item*123}</p>
+                      <span className="text-gray-500 text-[10px]">{item} hr</span>
                     </div>
-                    <p className="text-gray-300 text-sm">Amazing video! The scenery is breathtaking. I wish I could go there too!</p>
+                    <p className="text-gray-300 text-xs">Amazing video! The scenery is breathtaking. I wish I could go there too!</p>
                   </div>
                 </motion.div>
               ))}
             </div>
             
-            <div className="p-4 border-t border-gray-800 bg-black/30">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex-shrink-0 flex items-center justify-center">
+            <div className="p-3 border-t border-gray-800 bg-black/30">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex-shrink-0 flex items-center justify-center">
                   <span className="text-white text-xs font-bold">ME</span>
                 </div>
                 <div className="flex-1 relative">
                   <input 
                     type="text" 
                     placeholder="Add a comment..." 
-                    className="w-full bg-gray-800/80 border border-gray-700 rounded-full py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full bg-gray-800/80 border border-gray-700 rounded-full py-1.5 px-3 text-white text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
                   />
                   <motion.button 
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-purple-400 px-2 font-medium"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-purple-400 px-1.5 font-medium text-xs"
+                    whileTap={{ scale: 0.9 }}
                   >
                     Post
                   </motion.button>
@@ -513,7 +579,7 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
         )}
       </AnimatePresence>
 
-      {/* Share Overlay */}
+      {/* Share Overlay - More compact for mobile */}
       <AnimatePresence>
         {showShareOverlay && (
           <motion.div
@@ -524,36 +590,35 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
             onClick={() => setShowShareOverlay(false)}
           >
             <motion.div 
-              className="bg-gray-900 rounded-xl p-5 w-[80%] max-w-xs"
+              className="bg-gray-900 rounded-xl p-4 w-[85%] max-w-xs"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-white font-semibold text-center mb-4">Share to</h3>
+              <h3 className="text-white font-semibold text-center mb-3 text-sm">Share to</h3>
               
-              <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-4 gap-3 mb-4">
                 {['Instagram', 'Twitter', 'Facebook', 'WhatsApp', 'TikTok', 'Email', 'Link', 'More'].map((platform, index) => (
                   <motion.div 
                     key={platform}
                     className="flex flex-col items-center"
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    whileHover={{ y: -3 }}
+                    whileTap={{ scale: 0.9 }}
                   >
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 mb-1 flex items-center justify-center">
-                      <span className="text-white font-bold text-lg">{platform.charAt(0)}</span>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 mb-1 flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">{platform.charAt(0)}</span>
                     </div>
-                    <span className="text-white text-xs">{platform}</span>
+                    <span className="text-white text-[10px]">{platform}</span>
                   </motion.div>
                 ))}
               </div>
               
               <motion.button 
-                className="w-full py-2.5 rounded-full bg-gray-800 text-white font-medium"
+                className="w-full py-2 rounded-full bg-gray-800 text-white font-medium text-sm"
                 onClick={() => setShowShareOverlay(false)}
-                whileHover={{ backgroundColor: "#374151" }}
                 whileTap={{ scale: 0.97 }}
               >
                 Cancel
@@ -574,6 +639,15 @@ export default function VideoCard({ video = {}, onCommentClick, className = "" }
           0% { background-position: 0% 50% }
           50% { background-position: 100% 50% }
           100% { background-position: 0% 50% }
+        }
+        
+        .animate-marquee {
+          animation: Marquee 8s linear infinite;
+        }
+        
+        @keyframes Marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-100%); }
         }
       `}</style>
     </div>

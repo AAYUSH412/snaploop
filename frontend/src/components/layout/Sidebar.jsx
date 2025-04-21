@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Compass, Upload, User, Menu, X, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Sidebar = () => {
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(() => {
     const savedState = localStorage.getItem('sidebarExpanded');
@@ -262,6 +263,7 @@ const Sidebar = () => {
                   className="text-gray-400 hover:text-white p-1.5 rounded-full hover:bg-white/10"
                   whileHover={{ rotate: 180, backgroundColor: 'rgba(255,255,255,0.1)' }}
                   transition={{ duration: 0.3 }}
+                  onClick={() => navigate('/settings')}
                 >
                   <Settings size={16} />
                 </motion.button>
@@ -404,6 +406,7 @@ const Sidebar = () => {
                       className="text-gray-400 hover:text-white p-1.5 rounded-full hover:bg-white/10"
                       whileHover={{ rotate: 180, backgroundColor: 'rgba(255,255,255,0.1)' }}
                       transition={{ duration: 0.3 }}
+                      onClick={() => navigate('/settings')}
                     >
                       <Settings size={16} />
                     </motion.button>
