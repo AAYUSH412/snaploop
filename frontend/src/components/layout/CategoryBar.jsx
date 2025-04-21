@@ -118,7 +118,10 @@ const CategoryBar = () => {
     <div className="fixed top-0 left-0 right-0 z-40 md:left-[76px] bg-[#0A0A0A]/80 backdrop-blur-md border-b border-gray-800/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 relative">
         <div className="flex items-center justify-between py-3">
+          {/* Title - Hidden on mobile screens due to the navbar */}
           <h2 className="text-xl font-semibold text-white hidden md:block">Explore</h2>
+          
+          {/* Categories - Takes full width on mobile, partial width on desktop */}
           <div className="flex-1 md:flex-initial md:ml-8 relative flex items-center">
             {/* Left Scroll Button */}
             {showLeftArrow && (

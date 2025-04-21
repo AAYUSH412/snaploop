@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Sidebar from './Sidebar';
+import MobileNavbar from './MobileNavbar';
 import CategoryBar from './CategoryBar';
 import Footer from './Footer';
 
@@ -29,27 +30,25 @@ const AppLayout = () => {
   
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white font-sans">
-      {/* Sidebar Navigation */}
+      {/* Desktop Sidebar */}
       <Sidebar />
       
-      {/* Main Content Area with dynamic padding for sidebar */}
-      <motion.div 
-        className="transition-all duration-300"
-        animate={{ 
-          marginLeft: sidebarExpanded ? '200px' : '76px',
-        }}
-      >
+      {/* Mobile Navigation */}
+      <MobileNavbar />
+      
+      {/* Main Content Area with responsive layout */}
+      <div className={`transition-all duration-300 md:ml-[76px] ${sidebarExpanded ? 'md:ml-[200px]' : ''}`}>
         {/* Show CategoryBar only on the Explore page */}
         {showCategories && <CategoryBar />}
         
         {/* Main Content with Animation */}
         <motion.main 
-          className="max-w-7xl mx-auto px-4 sm:px-6 pb-12"
+          className="max-w-7xl mx-auto px-4 sm:px-6 pb-24 md:pb-12" // Added more bottom padding on mobile for the navigation bar
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4 }}
           style={{ 
-            paddingTop: showCategories ? '7rem' : '2rem',
+            paddingTop: showCategories ? '7rem' : '4rem', // Adjusted for mobile top navbar
           }}
         >
           <Outlet />
@@ -57,7 +56,7 @@ const AppLayout = () => {
         
         {/* Footer */}
         <Footer />
-      </motion.div>
+      </div>
     </div>
   );
 };
